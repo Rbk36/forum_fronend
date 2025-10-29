@@ -32,6 +32,37 @@
   transition: all ease-in-out 0.3s;
   color: orange;
 }
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.page_button {
+  padding: 0.5rem 1rem;
+  background-color: var(--blue-shade);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: 0.3s;
+}
+
+.page_button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page_button:hover:not(:disabled) {
+  background-color: var(--blue-dark);
+}
+
+.page_info {
+  font-weight: 600;
+}
 
 .no_questions {
   display: flex;

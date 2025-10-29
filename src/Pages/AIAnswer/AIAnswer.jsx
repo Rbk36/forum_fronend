@@ -1,56 +1,3 @@
-// // components/AIAnswer.js
-// import { useState } from "react";
-// import { axiosInstance } from "../../utility/axios";
-// import styles from "../../Pages/AIAnswer/AIAnswer.module.css"; // Ensure this CSS module exists for styling
-
-// const AIAnswer = () => {
-//   const [question, setQuestion] = useState("");
-//   const [aiResponse, setAiResponse] = useState("");
-//   const [loading, setLoading] = useState(false);
-
-//   const handleAsk = async (e) => {
-//     e.preventDefault();
-//     if (!question.trim()) return;
-
-//     setLoading(true);
-//     try {
-//       const response = await axiosInstance.post("/api/v1/ai/answer", {
-//         question,
-//       });
-//       setAiResponse(response.data.answer);
-//     } catch (error) {
-//       console.error("Error fetching AI answer:", error);
-//       setAiResponse("Sorry, I couldn't fetch an answer at the moment.");
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   return (
-//     <div className={styles.container}>
-//       <h2>Ask AI</h2>
-//       <form onSubmit={handleAsk}>
-//         <textarea
-//           value={question}
-//           onChange={(e) => setQuestion(e.target.value)}
-//           placeholder="Ask your question..."
-//           rows="4"
-//           required
-//         />
-//         <button type="submit" disabled={loading}>
-//           {loading ? "Thinking..." : "Ask AI"}
-//         </button>
-//       </form>
-//       {aiResponse && (
-//         <div className={styles.answer}>
-//           <strong>AI says:</strong> {aiResponse}
-//         </div>
-//       )}
-//     </div>
-//   );
-// };
-
-// export default AIAnswer;
 import { useEffect, useState, useContext } from "react";
 import { useParams } from "react-router-dom";
 import { axiosInstance } from "../../utility/axios";
@@ -72,19 +19,30 @@ function AIAnswer() {
     const fetchAIAnswer = async () => {
       try {
         setLoading(true);
-        const response = await axiosInstance.post("/api/v1/ai/answer", {
+        const response = await axiosInstance.post("/ai/answer", {
           questionId,
           userId: user?.id,
         });
         setAiAnswer(response.data.answer);
-      } catch (err) {
-        setError("Failed to fetch AI answer. Please try again later.");
-        Swal.fire({
-          title: "Error",
-          text: "Failed to fetch AI answer. Please try again later.",
-          icon: "error",
-          confirmButtonText: "OK",
+      } catch (error) {
+        console.error("Error generating AI answer:", error);
+        console.error("Stack:", error.stack);
+        if (error.response) {
+          console.error("API Response error data:", error.response.data);
+        }
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+          message: "Failed to generate AI answer.",
+          error: error.message,
         });
+
+        // } catch (err) {
+        //   setError("Failed to fetch AI answer. Please try again later.");
+        //   Swal.fire({
+        //     title: "Error",
+        //     text: "Failed to fetch AI answer. Please try again later.",
+        //     icon: "error",
+        //     confirmButtonText: "OK",
+        //   });
       } finally {
         setLoading(false);
       }
