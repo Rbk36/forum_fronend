@@ -14,7 +14,7 @@ function Question() {
 
   useEffect(() => {
     setLoading(true);
-    axiosInstance.get("/question").then((res) => {
+    axiosInstance.get("/questions").then((res) => {
       setQuestions(res.data.message);
       setLoading(false);
     });
