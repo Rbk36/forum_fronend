@@ -70,14 +70,14 @@ function Signup({ onSwitch }) {
           icon: "success",
           confirmButtonText: "OK",
         });
+        navigate("/login");
 
-        // Attempt login
+        // Auto login after successful registration
         try {
           const loginResponse = await axiosInstance.post("/user/login", {
-            usernameOrEmail: formData.email,
+            email: formData.email,
             password: formData.password,
           });
-
           if (loginResponse.status === 200) {
             localStorage.setItem("Evangadi_Forum", loginResponse.data.token);
             // You may use navigate rather than `window.location`
@@ -127,7 +127,7 @@ function Signup({ onSwitch }) {
           onClick={onSwitch}
           style={{
             cursor: "pointer",
-            color:'#ff6600'
+            color: "#ff6600",
           }}
         >
           Sign in

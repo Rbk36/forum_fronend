@@ -35,12 +35,33 @@ function QuestionAndAnswer() {
 
   async function handlePostAnswer(e) {
     e.preventDefault();
-    try {
-      const response = await axiosInstance.post("/answer", {
-        userid: userId,
-        answer: answerInput.current.value,
-        questionid: questionId,
+
+    const token = localStorage.getItem("token"); // or sessionStorage, depending on your setup
+    if (!token) {
+      Swal.fire({
+        title: "Unauthorized",
+        text: "You must be logged in to submit an answer.",
+        icon: "warning",
+        confirmButtonText: "OK",
       });
+      return;
+    }
+
+    try {
+      const response = await axiosInstance.post(
+        "/answer",
+        {
+          userid: userId,
+          answer: answerInput.current.value,
+          questionid: questionId,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`, // ✅ Attach token here
+          },
+        }
+      );
+
       if (response.status === 201) {
         Swal.fire({
           title: "Success!",
@@ -62,6 +83,18 @@ function QuestionAndAnswer() {
 
   async function handlePostAIAnswer(e) {
     e.preventDefault();
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      Swal.fire({
+        title: "Unauthorized",
+        text: "You must be logged in to generate an AI answer.",
+        icon: "warning",
+        confirmButtonText: "OK",
+      });
+      return;
+    }
+
     const prompt = aiPromptInput.current.value?.trim();
     if (!prompt) {
       Swal.fire({
@@ -74,10 +107,18 @@ function QuestionAndAnswer() {
     }
 
     try {
-      const response = await axiosInstance.post("/ai/answer", {
-        questionid: questionId,
-        prompt,
-      });
+      const response = await axiosInstance.post(
+        "/ai/answer",
+        {
+          questionid: questionId,
+          prompt,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`, // ✅ Attach token here
+          },
+        }
+      );
 
       if (response.status === 201) {
         Swal.fire({
