@@ -99,7 +99,8 @@ function QuestionAndAnswer() {
         await Swal.fire({
           title: "Error",
           text:
-            response.data?.msg || "Could not submit answer. Please try again.",
+            response.data?.message ||
+            "Could not submit answer. Please try again.",
           icon: "error",
           confirmButtonText: "OK",
         });
@@ -162,7 +163,7 @@ function QuestionAndAnswer() {
         );
         await Swal.fire({
           title: "Error",
-          text: response.data?.msg || "Failed to generate AI answer.",
+          text: response.data?.message || "Failed to generate AI answer.",
           icon: "error",
           confirmButtonText: "OK",
         });
@@ -176,7 +177,8 @@ function QuestionAndAnswer() {
       } else if (status === 429) {
         message = "Rate limit exceeded. Please try again later.";
       } else if (status === 400) {
-        message = error.response?.data?.msg || "Invalid request for AI answer.";
+        message =
+          error.response?.data?.message || "Invalid request for AI answer.";
       }
       await Swal.fire({
         title: "Error",
@@ -187,6 +189,70 @@ function QuestionAndAnswer() {
     } finally {
       setAiLoading(false);
     }
+  };
+
+  const handleDeleteAnswer = async (answerId) => {
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "This will permanently delete your answer.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel",
+    });
+    if (!result.isConfirmed) return;
+
+    const token = localStorage.getItem("Evangadi_Forum");
+    try {
+      const response = await axiosInstance.delete(`/answer/${answerId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.status === 200) {
+        await Swal.fire({
+          title: "Deleted!",
+          text: "Your answer has been deleted.",
+          icon: "success",
+          confirmButtonText: "OK",
+        });
+        await fetchQuestion();
+      } else {
+        await Swal.fire({
+          title: "Error",
+          text: "Could not delete answer.",
+          icon: "error",
+          confirmButtonText: "OK",
+        });
+      }
+    } catch (error) {
+      console.error("Error deleting answer:", error);
+      const status = error.response?.status;
+      if (status === 404) {
+        await Swal.fire({
+          title: "Error",
+          text: "Answer not found or already deleted.",
+          icon: "error",
+          confirmButtonText: "OK",
+        });
+      } else if (status === 403) {
+        await Swal.fire({
+          title: "Error",
+          text: "Not authorized to delete this answer.",
+          icon: "error",
+          confirmButtonText: "OK",
+        });
+      } else {
+        await Swal.fire({
+          title: "Error",
+          text: "Could not delete answer. Please try again.",
+          icon: "error",
+          confirmButtonText: "OK",
+        });
+      }
+    }
+  };
+
+  const handleEditAnswer = (answerId) => {
+    navigate(`/answer/edit/${answerId}`);
   };
 
   const handleDeleteQuestion = async (qid) => {
@@ -234,53 +300,6 @@ function QuestionAndAnswer() {
 
   const handleEditQuestion = (qid) => {
     navigate(`/question/edit/${qid}`);
-  };
-
-  const handleDeleteAnswer = async (answerId) => {
-    const result = await Swal.fire({
-      title: "Are you sure?",
-      text: "This will permanently delete your answer.",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Yes, delete it!",
-      cancelButtonText: "Cancel",
-    });
-    if (!result.isConfirmed) return;
-
-    const token = localStorage.getItem("Evangadi_Forum");
-    try {
-      const response = await axiosInstance.delete(`/answer/${answerId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.status === 200) {
-        await Swal.fire({
-          title: "Deleted!",
-          text: "Your answer has been deleted.",
-          icon: "success",
-          confirmButtonText: "OK",
-        });
-        await fetchQuestion();
-      } else {
-        await Swal.fire({
-          title: "Error",
-          text: "Could not delete answer.",
-          icon: "error",
-          confirmButtonText: "OK",
-        });
-      }
-    } catch (error) {
-      console.error("Error deleting answer:", error);
-      await Swal.fire({
-        title: "Error",
-        text: "Could not delete answer. Please try again.",
-        icon: "error",
-        confirmButtonText: "OK",
-      });
-    }
-  };
-
-  const handleEditAnswer = (answerId) => {
-    navigate(`/answer/edit/${answerId}`);
   };
 
   if (loading) {
