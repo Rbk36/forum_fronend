@@ -23,22 +23,28 @@ function QuestionAndAnswer() {
   const aiPromptInput = useRef();
   const navigate = useNavigate();
 
+  const fetchQuestion = async () => {
+    try {
+      setLoading(true);
+      const res = await axiosInstance.get(`/question/${questionId}`);
+      setQuestionDetails(res.data);
+    } catch (err) {
+      console.error("Error fetching question details:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    axiosInstance
-      .get(`/question/${questionId}`)
-      .then((res) => setQuestionDetails(res.data))
-      .catch((err) => {
-        console.error("Error fetching question details:", err);
-      })
-      .finally(() => setLoading(false));
+    fetchQuestion();
   }, [questionId]);
 
   async function handlePostAnswer(e) {
     e.preventDefault();
 
-    const token = localStorage.getItem("Evangadi_Forum"); // or sessionStorage, depending on your setup
+    const token = localStorage.getItem("Evangadi_Forum");
     if (!token) {
-      Swal.fire({
+      await Swal.fire({
         title: "Unauthorized",
         text: "You must be logged in to submit an answer.",
         icon: "warning",
@@ -57,22 +63,28 @@ function QuestionAndAnswer() {
         },
         {
           headers: {
-            Authorization: `Bearer ${token}`, // ✅ Attach token here
+            Authorization: `Bearer ${token}`,
           },
         }
       );
 
       if (response.status === 201) {
-        Swal.fire({
+        await Swal.fire({
           title: "Success!",
           text: "Answer submitted successfully!",
           icon: "success",
           confirmButtonText: "OK",
-        }).then(() => window.location.reload());
+        });
+
+        // clear input
+        answerInput.current.value = "";
+
+        // refetch question details so the new answer appears
+        await fetchQuestion();
       }
     } catch (error) {
       console.error("Error posting answer:", error);
-      Swal.fire({
+      await Swal.fire({
         title: "Error",
         text: "Failed to post answer. Please try again later.",
         icon: "error",
@@ -84,7 +96,7 @@ function QuestionAndAnswer() {
   async function handlePostAIAnswer(e) {
     e.preventDefault();
 
-    const token = localStorage.getItem("Evangadi_Forum"); // adjust key as used
+    const token = localStorage.getItem("Evangadi_Forum");
     if (!token) {
       await Swal.fire({
         title: "Unauthorized",
@@ -127,7 +139,15 @@ function QuestionAndAnswer() {
           icon: "success",
           confirmButtonText: "OK",
         });
-        navigate(`/question/${questionId}`, { replace: true });
+
+        // clear input
+        aiPromptInput.current.value = "";
+
+        // refetch question details to show the new AI answer
+        await fetchQuestion();
+
+        // Optionally navigate (if you handle replacement)
+        // navigate(`/question/${questionId}`, { replace: true });
       } else {
         console.warn("Unexpected status:", response.status, response.data);
         await Swal.fire({
@@ -171,17 +191,18 @@ function QuestionAndAnswer() {
       try {
         const response = await axiosInstance.delete(`/question/${qid}`);
         if (response.status === 200) {
-          Swal.fire(
+          await Swal.fire(
             "Deleted!",
             "Your question has been deleted.",
             "success"
-          ).then(() => navigate("/", { replace: true }));
+          );
+          navigate("/", { replace: true });
         } else {
-          Swal.fire("Error", "Could not delete question.", "error");
+          await Swal.fire("Error", "Could not delete question.", "error");
         }
       } catch (error) {
         console.error("Error deleting question:", error);
-        Swal.fire(
+        await Swal.fire(
           "Error",
           "Could not delete question. Please try again.",
           "error"
@@ -270,7 +291,11 @@ function QuestionAndAnswer() {
 
           {/* Answers */}
           <h2
-            style={{ padding: "5px 0", textAlign: "left", fontWeight: "600" }}
+            style={{
+              padding: "5px 0",
+              textAlign: "left",
+              fontWeight: "600",
+            }}
           >
             <MdOutlineQuestionAnswer
               size={35}
