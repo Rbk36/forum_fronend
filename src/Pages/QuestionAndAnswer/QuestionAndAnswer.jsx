@@ -84,9 +84,9 @@ function QuestionAndAnswer() {
   async function handlePostAIAnswer(e) {
     e.preventDefault();
 
-    const token = localStorage.getItem("Evangadi_Forum");
+    const token = localStorage.getItem("Evangadi_Forum"); // adjust key as used
     if (!token) {
-      Swal.fire({
+      await Swal.fire({
         title: "Unauthorized",
         text: "You must be logged in to generate an AI answer.",
         icon: "warning",
@@ -97,7 +97,7 @@ function QuestionAndAnswer() {
 
     const prompt = aiPromptInput.current.value?.trim();
     if (!prompt) {
-      Swal.fire({
+      await Swal.fire({
         title: "Error",
         text: "Prompt is required.",
         icon: "error",
@@ -115,31 +115,42 @@ function QuestionAndAnswer() {
         },
         {
           headers: {
-            Authorization: `Bearer ${token}`, // ✅ Attach token here
+            Authorization: `Bearer ${token}`,
           },
         }
       );
 
       if (response.status === 201) {
-        Swal.fire({
+        await Swal.fire({
           title: "AI Answer Generated!",
-          text: "The AI-generated answer has been posted successfully!",
+          text: "The AI‑generated answer has been posted successfully!",
           icon: "success",
           confirmButtonText: "OK",
-        }).then(() => navigate(`/question/${questionId}`, { replace: true }));
+        });
+        navigate(`/question/${questionId}`, { replace: true });
       } else {
-        Swal.fire({
+        console.warn("Unexpected status:", response.status, response.data);
+        await Swal.fire({
           title: "Error",
-          text: "Failed to generate AI answer.",
+          text: response.data?.msg || "Failed to generate AI answer.",
           icon: "error",
           confirmButtonText: "OK",
         });
       }
     } catch (error) {
       console.error("Error posting AI answer:", error);
-      Swal.fire({
+      const status = error.response?.status;
+      let message = "Failed to generate AI answer. Please try again later.";
+      if (status === 401 || status === 403) {
+        message = "Unauthorized. Please login again.";
+      } else if (status === 429) {
+        message = "Rate limit exceeded. Please try later.";
+      } else if (status === 400) {
+        message = error.response?.data?.msg || "Invalid request for AI answer.";
+      }
+      await Swal.fire({
         title: "Error",
-        text: "Failed to generate AI answer. Please try again later.",
+        text: message,
         icon: "error",
         confirmButtonText: "OK",
       });
