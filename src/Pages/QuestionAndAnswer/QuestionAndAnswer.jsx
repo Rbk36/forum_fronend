@@ -13,12 +13,15 @@ import { LuCalendarClock } from "react-icons/lu";
 import Swal from "sweetalert2";
 
 function QuestionAndAnswer() {
-  const [questionDetails, setQuestionDetails] = useState({});
   const { user } = useContext(UserState);
-  const userId = user?.userid;
+  const userId = user?.userid; // currently logged in user's id
   const { questionId } = useParams();
+
+  const [questionDetails, setQuestionDetails] = useState({});
   const [loading, setLoading] = useState(true);
+  const [aiLoading, setAiLoading] = useState(false);
   const [expandedAnswer, setExpandedAnswer] = useState(null);
+
   const answerInput = useRef();
   const aiPromptInput = useRef();
   const navigate = useNavigate();
@@ -30,6 +33,12 @@ function QuestionAndAnswer() {
       setQuestionDetails(res.data);
     } catch (err) {
       console.error("Error fetching question details:", err);
+      Swal.fire({
+        title: "Error",
+        text: "Could not load question details. Please try again.",
+        icon: "error",
+        confirmButtonText: "OK",
+      });
     } finally {
       setLoading(false);
     }
@@ -39,9 +48,8 @@ function QuestionAndAnswer() {
     fetchQuestion();
   }, [questionId]);
 
-  async function handlePostAnswer(e) {
+  const handlePostAnswer = async (e) => {
     e.preventDefault();
-
     const token = localStorage.getItem("Evangadi_Forum");
     if (!token) {
       await Swal.fire({
@@ -53,21 +61,27 @@ function QuestionAndAnswer() {
       return;
     }
 
+    const answerText = answerInput.current.value?.trim();
+    if (!answerText) {
+      await Swal.fire({
+        title: "Error",
+        text: "Answer cannot be empty.",
+        icon: "error",
+        confirmButtonText: "OK",
+      });
+      return;
+    }
+
     try {
       const response = await axiosInstance.post(
         "/answer",
         {
           userid: userId,
-          answer: answerInput.current.value,
+          answer: answerText,
           questionid: questionId,
         },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-
       if (response.status === 201) {
         await Swal.fire({
           title: "Success!",
@@ -75,12 +89,21 @@ function QuestionAndAnswer() {
           icon: "success",
           confirmButtonText: "OK",
         });
-
-        // clear input
         answerInput.current.value = "";
-
-        // refetch question details so the new answer appears
-        await fetchQuestion();
+        await fetchQuestion(); // refresh so new answer appears
+      } else {
+        console.warn(
+          "Unexpected status in handlePostAnswer:",
+          response.status,
+          response.data
+        );
+        await Swal.fire({
+          title: "Error",
+          text:
+            response.data?.msg || "Could not submit answer. Please try again.",
+          icon: "error",
+          confirmButtonText: "OK",
+        });
       }
     } catch (error) {
       console.error("Error posting answer:", error);
@@ -91,11 +114,10 @@ function QuestionAndAnswer() {
         confirmButtonText: "OK",
       });
     }
-  }
+  };
 
-  async function handlePostAIAnswer(e) {
+  const handlePostAIAnswer = async (e) => {
     e.preventDefault();
-
     const token = localStorage.getItem("Evangadi_Forum");
     if (!token) {
       await Swal.fire({
@@ -119,37 +141,27 @@ function QuestionAndAnswer() {
     }
 
     try {
+      setAiLoading(true);
       const response = await axiosInstance.post(
         "/ai/answer",
-        {
-          questionid: questionId,
-          prompt,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+        { questionid: questionId, prompt },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-
       if (response.status === 201) {
         await Swal.fire({
           title: "AI Answer Generated!",
-          text: "The AI‑generated answer has been posted successfully!",
+          text: "An AI‑generated answer has been posted successfully!",
           icon: "success",
           confirmButtonText: "OK",
         });
-
-        // clear input
         aiPromptInput.current.value = "";
-
-        // refetch question details to show the new AI answer
         await fetchQuestion();
-
-        // Optionally navigate (if you handle replacement)
-        // navigate(`/question/${questionId}`, { replace: true });
       } else {
-        console.warn("Unexpected status:", response.status, response.data);
+        console.warn(
+          "Unexpected status in handlePostAIAnswer:",
+          response.status,
+          response.data
+        );
         await Swal.fire({
           title: "Error",
           text: response.data?.msg || "Failed to generate AI answer.",
@@ -164,7 +176,7 @@ function QuestionAndAnswer() {
       if (status === 401 || status === 403) {
         message = "Unauthorized. Please login again.";
       } else if (status === 429) {
-        message = "Rate limit exceeded. Please try later.";
+        message = "Rate limit exceeded. Please try again later.";
       } else if (status === 400) {
         message = error.response?.data?.msg || "Invalid request for AI answer.";
       }
@@ -174,10 +186,12 @@ function QuestionAndAnswer() {
         icon: "error",
         confirmButtonText: "OK",
       });
+    } finally {
+      setAiLoading(false);
     }
-  }
+  };
 
-  async function handleDeleteQuestion(qid) {
+  const handleDeleteQuestion = async (qid) => {
     const result = await Swal.fire({
       title: "Are you sure?",
       text: "This will permanently delete your question.",
@@ -186,56 +200,88 @@ function QuestionAndAnswer() {
       confirmButtonText: "Yes, delete it!",
       cancelButtonText: "Cancel",
     });
+    if (!result.isConfirmed) {
+      return;
+    }
 
-    if (result.isConfirmed) {
-      try {
-        const response = await axiosInstance.delete(`/question/${qid}`);
-        if (response.status === 200) {
-          await Swal.fire(
-            "Deleted!",
-            "Your question has been deleted.",
-            "success"
-          );
-          navigate("/", { replace: true });
-        } else {
-          await Swal.fire("Error", "Could not delete question.", "error");
-        }
-      } catch (error) {
-        console.error("Error deleting question:", error);
-        await Swal.fire(
-          "Error",
-          "Could not delete question. Please try again.",
-          "error"
-        );
+    const token = localStorage.getItem("Evangadi_Forum");
+    try {
+      const response = await axiosInstance.delete(`/question/${qid}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.status === 200) {
+        await Swal.fire({
+          title: "Deleted!",
+          text: "Your question has been deleted.",
+          icon: "success",
+          confirmButtonText: "OK",
+        });
+        navigate("/", { replace: true });
+      } else {
+        await Swal.fire({
+          title: "Error",
+          text: "Could not delete question.",
+          icon: "error",
+          confirmButtonText: "OK",
+        });
       }
+    } catch (error) {
+      console.error("Error deleting question:", error);
+      await Swal.fire({
+        title: "Error",
+        text: "Could not delete question. Please try again.",
+        icon: "error",
+        confirmButtonText: "OK",
+      });
     }
-  }
-
-  function handleEditQuestion(qid) {
-    navigate(`/question/edit/${qid}`);
-  }
-
-  const truncateText = (text, limit = 50) => {
-    if (!text) return "";
-    const words = text.split(" ");
-    if (words.length > limit) {
-      return (
-        <>
-          {words.slice(0, limit).join(" ")}{" "}
-          <span
-            style={{ color: "var(--blue-shade)", cursor: "pointer" }}
-            onClick={() => setExpandedAnswer(null)}
-          >
-            ... See More
-          </span>
-        </>
-      );
-    }
-    return text;
   };
 
-  const toggleExpandAnswer = (answerId) =>
-    setExpandedAnswer(expandedAnswer === answerId ? null : answerId);
+  const handleEditQuestion = (qid) => navigate(`/question/edit/${qid}`);
+
+  const handleDeleteAnswer = async (answerId) => {
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "This will permanently delete your answer.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel",
+    });
+    if (!result.isConfirmed) return;
+
+    const token = localStorage.getItem("Evangadi_Forum");
+    try {
+      const response = await axiosInstance.delete(`/answer/${answerId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.status === 200) {
+        await Swal.fire({
+          title: "Deleted!",
+          text: "Your answer has been deleted.",
+          icon: "success",
+          confirmButtonText: "OK",
+        });
+        await fetchQuestion();
+      } else {
+        await Swal.fire({
+          title: "Error",
+          text: "Could not delete answer.",
+          icon: "error",
+          confirmButtonText: "OK",
+        });
+      }
+    } catch (error) {
+      console.error("Error deleting answer:", error);
+      await Swal.fire({
+        title: "Error",
+        text: "Could not delete answer. Please try again.",
+        icon: "error",
+        confirmButtonText: "OK",
+      });
+    }
+  };
+
+  const handleEditAnswer = (answerId) => navigate(`/answer/edit/${answerId}`);
 
   if (loading) {
     return (
@@ -271,7 +317,7 @@ function QuestionAndAnswer() {
             </div>
           </div>
 
-          {/* Show Edit/Delete only for question owner */}
+          {/* Edit/Delete for question owner */}
           {userId === questionDetails.userid && (
             <div className={styles.questionActions}>
               <button
@@ -291,11 +337,7 @@ function QuestionAndAnswer() {
 
           {/* Answers */}
           <h2
-            style={{
-              padding: "5px 0",
-              textAlign: "left",
-              fontWeight: "600",
-            }}
+            style={{ padding: "5px 0", textAlign: "left", fontWeight: "600" }}
           >
             <MdOutlineQuestionAnswer
               size={35}
@@ -313,12 +355,19 @@ function QuestionAndAnswer() {
                 </div>
                 <div
                   className={styles.answerTextContainer}
-                  onClick={() => toggleExpandAnswer(answer.answerid)}
+                  onClick={() =>
+                    setExpandedAnswer(
+                      expandedAnswer === answer.answerid
+                        ? null
+                        : answer.answerid
+                    )
+                  }
                 >
                   <p className={styles.answerText}>
                     {expandedAnswer === answer.answerid
                       ? answer.answer
-                      : truncateText(answer.answer)}
+                      : answer.answer.slice(0, 100) +
+                        (answer.answer.length > 100 ? "… See More" : "")}
                   </p>
                   <p className={styles.answer_date}>
                     <LuCalendarClock style={{ marginRight: "5px" }} size={19} />
@@ -327,6 +376,23 @@ function QuestionAndAnswer() {
                       .toUpperCase()}
                   </p>
                 </div>
+                {/* Edit/Delete for answer owner */}
+                {userId === answer.userid && (
+                  <div className={styles.answerActions}>
+                    <button
+                      className={styles.editButton}
+                      onClick={() => handleEditAnswer(answer.answerid)}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className={styles.deleteButton}
+                      onClick={() => handleDeleteAnswer(answer.answerid)}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                )}
               </div>
             ))
           ) : (
@@ -341,9 +407,9 @@ function QuestionAndAnswer() {
 
           {/* User Answer Form */}
           <section className={styles.answerFormSection}>
-            <h3 className={styles.answerFormTitle}>Answer The Top Question</h3>
+            <h3 className={styles.answerFormTitle}>Answer The Question</h3>
             <Link to="/" className={styles.questionPageLink}>
-              Go to Question page
+              Go to Questions Page
             </Link>
             <form onSubmit={handlePostAnswer}>
               <textarea
@@ -372,8 +438,12 @@ function QuestionAndAnswer() {
                 className={styles.answerInput}
                 ref={aiPromptInput}
               />
-              <button className={styles.postAnswerButton} type="submit">
-                Generate AI Answer
+              <button
+                className={styles.postAnswerButton}
+                type="submit"
+                disabled={aiLoading}
+              >
+                {aiLoading ? "Generating AI Answer…" : "Generate AI Answer"}
               </button>
             </form>
           </section>
