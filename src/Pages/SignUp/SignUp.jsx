@@ -4,9 +4,11 @@ import Swal from "sweetalert2";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { axiosInstance } from "../../utility/axios";
 import classes from "./signUp.module.css";
+import { useNavigate } from "react-router-dom";
 
 function Signup({ onSwitch }) {
-  // define state variables
+  const navigate = useNavigate();
+
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -31,7 +33,6 @@ function Signup({ onSwitch }) {
     setShowPassword((prev) => !prev);
   };
 
-  // validation function
   function validateUserData(fname, lname) {
     const isValidFname = /^[A-Za-z]{2,}$/.test(fname.trim());
     const isValidLname = /^[A-Za-z]{2,}$/.test(lname.trim());
@@ -44,7 +45,7 @@ function Signup({ onSwitch }) {
     if (!validateUserData(formData.firstName, formData.lastName)) {
       await Swal.fire({
         title: "Error",
-        text: "Please enter valid first and lasname. Names should contain only letters and be at least two characters.",
+        text: "Please enter valid first and last name. Names should contain only letters and be at least two characters.",
         icon: "error",
         confirmButtonText: "OK",
       });
@@ -60,16 +61,18 @@ function Signup({ onSwitch }) {
         password: formData.password,
       });
 
-      setSuccess("User registered successfully.");
-
       if (response.status === 201) {
+        setSuccess("User registered successfully.");
         setError(null);
+
         await Swal.fire({
           title: "Success!",
           text: "User registered successfully! Logging in...",
           icon: "success",
           confirmButtonText: "OK",
         });
+
+        // Navigate **after** the alert
         navigate("/login");
 
         // Auto login after successful registration
@@ -80,8 +83,7 @@ function Signup({ onSwitch }) {
           });
           if (loginResponse.status === 200) {
             localStorage.setItem("Evangadi_Forum", loginResponse.data.token);
-            // You may use navigate rather than `window.location`
-            window.location.href = "/";
+            navigate("/"); // redirect to home or dashboard
           } else {
             setError(
               loginResponse.data.msg || "Login failed. Please try again."
@@ -93,6 +95,7 @@ function Signup({ onSwitch }) {
         }
       } else {
         setError(response.data.Msg || "Registration failed.");
+        setSuccess(null);
         await Swal.fire({
           title: "Error",
           text:
@@ -100,7 +103,6 @@ function Signup({ onSwitch }) {
           icon: "error",
           confirmButtonText: "OK",
         });
-        setSuccess(null);
       }
     } catch (err) {
       console.error("Registration API error:", err);
@@ -108,13 +110,13 @@ function Signup({ onSwitch }) {
         err.response?.data?.Msg ||
         "Error submitting the form. Please try again.";
       setError(msg);
+      setSuccess(null);
       await Swal.fire({
         title: "Error",
         text: msg,
         icon: "error",
         confirmButtonText: "OK",
       });
-      setSuccess(null);
     }
   };
 
@@ -123,13 +125,7 @@ function Signup({ onSwitch }) {
       <h2>Join the network</h2>
       <p className="signin-text">
         Already have an account?{" "}
-        <a
-          onClick={onSwitch}
-          style={{
-            cursor: "pointer",
-            color: "#ff6600",
-          }}
-        >
+        <a onClick={onSwitch} style={{ cursor: "pointer", color: "#ff6600" }}>
           Sign in
         </a>
       </p>
