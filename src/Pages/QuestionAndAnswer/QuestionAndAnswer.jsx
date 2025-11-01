@@ -36,7 +36,7 @@ function QuestionAndAnswer() {
   async function handlePostAnswer(e) {
     e.preventDefault();
 
-    const token = localStorage.getItem("token"); // or sessionStorage, depending on your setup
+    const token = localStorage.getItem("Evangadi_Forum"); // or sessionStorage, depending on your setup
     if (!token) {
       Swal.fire({
         title: "Unauthorized",
@@ -84,7 +84,7 @@ function QuestionAndAnswer() {
   async function handlePostAIAnswer(e) {
     e.preventDefault();
 
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("Evangadi_Forum");
     if (!token) {
       Swal.fire({
         title: "Unauthorized",
