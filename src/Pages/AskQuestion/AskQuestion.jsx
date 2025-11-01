@@ -43,7 +43,6 @@ function AskQuestion() {
           userid,
           title,
           description,
-          tag: "General",
         },
         {
           headers: {

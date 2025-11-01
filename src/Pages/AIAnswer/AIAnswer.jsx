@@ -34,15 +34,6 @@ function AIAnswer() {
           message: "Failed to generate AI answer.",
           error: error.message,
         });
-
-        // } catch (err) {
-        //   setError("Failed to fetch AI answer. Please try again later.");
-        //   Swal.fire({
-        //     title: "Error",
-        //     text: "Failed to fetch AI answer. Please try again later.",
-        //     icon: "error",
-        //     confirmButtonText: "OK",
-        //   });
       } finally {
         setLoading(false);
       }
