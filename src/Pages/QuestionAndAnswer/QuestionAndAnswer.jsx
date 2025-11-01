@@ -1,4 +1,3 @@
-// QuestionAndAnswer.jsx
 import { useContext, useEffect, useRef, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { axiosInstance } from "../../utility/axios.js";
@@ -233,6 +232,7 @@ function QuestionAndAnswer() {
           icon: "error",
           confirmButtonText: "OK",
         });
+        await fetchQuestion();
       } else if (status === 403) {
         await Swal.fire({
           title: "Error",
@@ -249,57 +249,6 @@ function QuestionAndAnswer() {
         });
       }
     }
-  };
-
-  const handleEditAnswer = (answerId) => {
-    navigate(`/answer/edit/${answerId}`);
-  };
-
-  const handleDeleteQuestion = async (qid) => {
-    const result = await Swal.fire({
-      title: "Are you sure?",
-      text: "This will permanently delete your question.",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Yes, delete it!",
-      cancelButtonText: "Cancel",
-    });
-    if (!result.isConfirmed) return;
-
-    const token = localStorage.getItem("Evangadi_Forum");
-    try {
-      const response = await axiosInstance.delete(`/question/${qid}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.status === 200) {
-        await Swal.fire({
-          title: "Deleted!",
-          text: "Your question has been deleted.",
-          icon: "success",
-          confirmButtonText: "OK",
-        });
-        navigate("/", { replace: true });
-      } else {
-        await Swal.fire({
-          title: "Error",
-          text: "Could not delete question.",
-          icon: "error",
-          confirmButtonText: "OK",
-        });
-      }
-    } catch (error) {
-      console.error("Error deleting question:", error);
-      await Swal.fire({
-        title: "Error",
-        text: "Could not delete question. Please try again.",
-        icon: "error",
-        confirmButtonText: "OK",
-      });
-    }
-  };
-
-  const handleEditQuestion = (qid) => {
-    navigate(`/question/edit/${qid}`);
   };
 
   if (loading) {
@@ -335,24 +284,6 @@ function QuestionAndAnswer() {
               </p>
             </div>
           </div>
-
-          {/* Edit/Delete for question owner */}
-          {userId === questionDetails.userid && (
-            <div className={styles.questionActions}>
-              <button
-                className={styles.editButton}
-                onClick={() => handleEditQuestion(questionDetails.questionid)}
-              >
-                Edit Question
-              </button>
-              <button
-                className={styles.deleteButton}
-                onClick={() => handleDeleteQuestion(questionDetails.questionid)}
-              >
-                Delete Question
-              </button>
-            </div>
-          )}
 
           {/* Answers */}
           <h2
@@ -396,15 +327,9 @@ function QuestionAndAnswer() {
                       .toUpperCase()}
                   </p>
                 </div>
-                {/* Edit/Delete for answer owner */}
+                {/* Delete for answer owner */}
                 {userId === answer.userid && (
                   <div className={styles.answerActions}>
-                    <button
-                      className={styles.editButton}
-                      onClick={() => handleEditAnswer(answer.answerid)}
-                    >
-                      Edit
-                    </button>
                     <button
                       className={styles.deleteButton}
                       onClick={() => handleDeleteAnswer(answer.answerid)}
