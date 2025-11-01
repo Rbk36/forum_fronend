@@ -14,8 +14,9 @@ import Swal from "sweetalert2";
 
 function QuestionAndAnswer() {
   const { user } = useContext(UserState);
-  const userId = user?.userid; // currently logged in user's id
+  const userId = user?.userid;
   const { questionId } = useParams();
+  const navigate = useNavigate();
 
   const [questionDetails, setQuestionDetails] = useState({});
   const [loading, setLoading] = useState(true);
@@ -24,7 +25,6 @@ function QuestionAndAnswer() {
 
   const answerInput = useRef();
   const aiPromptInput = useRef();
-  const navigate = useNavigate();
 
   const fetchQuestion = async () => {
     try {
@@ -33,7 +33,7 @@ function QuestionAndAnswer() {
       setQuestionDetails(res.data);
     } catch (err) {
       console.error("Error fetching question details:", err);
-      Swal.fire({
+      await Swal.fire({
         title: "Error",
         text: "Could not load question details. Please try again.",
         icon: "error",
@@ -60,7 +60,6 @@ function QuestionAndAnswer() {
       });
       return;
     }
-
     const answerText = answerInput.current.value?.trim();
     if (!answerText) {
       await Swal.fire({
@@ -90,7 +89,7 @@ function QuestionAndAnswer() {
           confirmButtonText: "OK",
         });
         answerInput.current.value = "";
-        await fetchQuestion(); // refresh so new answer appears
+        await fetchQuestion();
       } else {
         console.warn(
           "Unexpected status in handlePostAnswer:",
@@ -128,7 +127,6 @@ function QuestionAndAnswer() {
       });
       return;
     }
-
     const prompt = aiPromptInput.current.value?.trim();
     if (!prompt) {
       await Swal.fire({
@@ -200,9 +198,7 @@ function QuestionAndAnswer() {
       confirmButtonText: "Yes, delete it!",
       cancelButtonText: "Cancel",
     });
-    if (!result.isConfirmed) {
-      return;
-    }
+    if (!result.isConfirmed) return;
 
     const token = localStorage.getItem("Evangadi_Forum");
     try {
@@ -236,7 +232,9 @@ function QuestionAndAnswer() {
     }
   };
 
-  const handleEditQuestion = (qid) => navigate(`/question/edit/${qid}`);
+  const handleEditQuestion = (qid) => {
+    navigate(`/question/edit/${qid}`);
+  };
 
   const handleDeleteAnswer = async (answerId) => {
     const result = await Swal.fire({
@@ -281,7 +279,9 @@ function QuestionAndAnswer() {
     }
   };
 
-  const handleEditAnswer = (answerId) => navigate(`/answer/edit/${answerId}`);
+  const handleEditAnswer = (answerId) => {
+    navigate(`/answer/edit/${answerId}`);
+  };
 
   if (loading) {
     return (
@@ -366,8 +366,9 @@ function QuestionAndAnswer() {
                   <p className={styles.answerText}>
                     {expandedAnswer === answer.answerid
                       ? answer.answer
-                      : answer.answer.slice(0, 100) +
-                        (answer.answer.length > 100 ? "… See More" : "")}
+                      : answer.answer.length > 100
+                      ? answer.answer.slice(0, 100) + "… See More"
+                      : answer.answer}
                   </p>
                   <p className={styles.answer_date}>
                     <LuCalendarClock style={{ marginRight: "5px" }} size={19} />
