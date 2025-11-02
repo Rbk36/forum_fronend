@@ -197,7 +197,12 @@ function QuestionAndAnswer() {
 
   const handleDeleteAnswer = async (answerid) => {
     const result = await Swal.fire({
-      /* confirm dialog */
+      title: "Are you sure?",
+      text: "This will permanently delete your answer.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel",
     });
     if (!result.isConfirmed) return;
 
@@ -207,34 +212,46 @@ function QuestionAndAnswer() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.status === 200) {
-        await Swal.fire("Deleted!", "Your answer has been deleted.", "success");
-        await fetchQuestion(); // re‐fetch to update UI
+        await Swal.fire({
+          title: "Deleted!",
+          text: "Your answer has been deleted.",
+          icon: "success",
+          confirmButtonText: "OK",
+        });
+        await fetchQuestion();
       } else {
-        // unexpected status
-        await Swal.fire("Error", "Could not delete answer.", "error");
-        await fetchQuestion(); // refresh anyway
+        await Swal.fire({
+          title: "Error",
+          text: "Could not delete answer.",
+          icon: "error",
+          confirmButtonText: "OK",
+        });
       }
     } catch (error) {
+      console.error("Error deleting answer:", error);
       const status = error.response?.status;
       if (status === 404) {
-        await Swal.fire(
-          "Error",
-          "Answer not found or already deleted.",
-          "error"
-        );
-        await fetchQuestion(); // important — update UI
+        await Swal.fire({
+          title: "Error",
+          text: "Answer not found or already deleted.",
+          icon: "error",
+          confirmButtonText: "OK",
+        });
+        await fetchQuestion();
       } else if (status === 403) {
-        await Swal.fire(
-          "Error",
-          "Not authorized to delete this answer.",
-          "error"
-        );
+        await Swal.fire({
+          title: "Error",
+          text: "Not authorized to delete this answer.",
+          icon: "error",
+          confirmButtonText: "OK",
+        });
       } else {
-        await Swal.fire(
-          "Error",
-          "Could not delete answer. Please try again.",
-          "error"
-        );
+        await Swal.fire({
+          title: "Error",
+          text: "Could not delete answer. Please try again.",
+          icon: "error",
+          confirmButtonText: "OK",
+        });
       }
     }
   };
