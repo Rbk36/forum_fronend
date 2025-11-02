@@ -1,5 +1,5 @@
 import { useEffect, useState, useContext } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { axiosInstance } from "../../utility/axios";
 import Layout from "../../Layout/Layout";
 import { UserState } from "../../App";
@@ -14,35 +14,53 @@ function AIAnswer() {
   const [aiAnswer, setAiAnswer] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchAIAnswer = async () => {
+      if (!user?.userid) {
+        // If user not logged in redirect or show warning
+        await Swal.fire({
+          title: "Unauthorized",
+          text: "You must be logged in to use AI answer.",
+          icon: "warning",
+          confirmButtonText: "OK",
+        });
+        navigate("/", { replace: true });
+        return;
+      }
+
       try {
         setLoading(true);
-        const response = await axiosInstance.post("/ai/answer", {
-          questionId,
-          userId: user?.id,
-        });
+        const token = localStorage.getItem("Evangadi_Forum");
+        const response = await axiosInstance.post(
+          "/ai/answer",
+          {
+            questionid: questionId,
+            prompt: "", // optionally if prompt required
+          },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            timeout: 30000, // add timeout
+          }
+        );
         setAiAnswer(response.data.answer);
-      } catch (error) {
-        console.error("Error generating AI answer:", error);
-        console.error("Stack:", error.stack);
-        if (error.response) {
-          console.error("API Response error data:", error.response.data);
+      } catch (err) {
+        console.error("Error generating AI answer:", err);
+        if (err.code === "ECONNABORTED") {
+          setError("Request timed out. Please try again.");
+        } else {
+          setError(
+            err.response?.data?.message || "Failed to generate AI answer."
+          );
         }
-        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-          message: "Failed to generate AI answer.",
-          error: error.message,
-        });
       } finally {
         setLoading(false);
       }
     };
 
-    if (user?.id) {
-      fetchAIAnswer();
-    }
-  }, [questionId, user?.id]);
+    fetchAIAnswer();
+  }, [questionId, user?.userid, navigate]);
 
   return (
     <Layout>
@@ -53,7 +71,7 @@ function AIAnswer() {
         </div>
         {loading && <p>Loading AI-generated answer...</p>}
         {error && <p className={styles.error}>{error}</p>}
-        {aiAnswer && !loading && !error && (
+        {!loading && !error && (
           <div className={styles.answer}>
             <ReactMarkdown>{aiAnswer}</ReactMarkdown>
           </div>

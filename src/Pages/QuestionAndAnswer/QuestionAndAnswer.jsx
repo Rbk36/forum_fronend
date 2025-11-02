@@ -143,12 +143,15 @@ function QuestionAndAnswer() {
       const response = await axiosInstance.post(
         "/ai/answer",
         { questionid: questionId, prompt },
-        { headers: { Authorization: `Bearer ${token}` } }
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 30000, // increased timeout
+        }
       );
       if (response.status === 201) {
         await Swal.fire({
           title: "AI Answer Generated!",
-          text: "An AI‑generated answer has been posted successfully!",
+          text: "An AI-generated answer has been posted successfully!",
           icon: "success",
           confirmButtonText: "OK",
         });
@@ -171,7 +174,9 @@ function QuestionAndAnswer() {
       console.error("Error posting AI answer:", error);
       const status = error.response?.status;
       let message = "Failed to generate AI answer. Please try again later.";
-      if (status === 401 || status === 403) {
+      if (error.code === "ECONNABORTED") {
+        message = "Request timed out. Please try again.";
+      } else if (status === 401 || status === 403) {
         message = "Unauthorized. Please login again.";
       } else if (status === 429) {
         message = "Rate limit exceeded. Please try again later.";
