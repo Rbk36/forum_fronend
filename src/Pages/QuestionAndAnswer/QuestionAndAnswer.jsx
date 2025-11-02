@@ -204,6 +204,7 @@ function QuestionAndAnswer() {
       confirmButtonText: "Yes, delete it!",
       cancelButtonText: "Cancel",
     });
+    console.log(answerid);
     if (!result.isConfirmed) return;
 
     const token = localStorage.getItem("Evangadi_Forum");
