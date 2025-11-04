@@ -18,7 +18,9 @@ function Question() {
     const fetchQuestions = async () => {
       setLoading(true);
       try {
-        const res = await axiosInstance.get(`/questions?page=${page}&limit=6`);
+        const res = await axiosInstance.get(
+          `/questions?page=${page}&limit=6`
+        );
         setQuestions(res.data.data);
         setTotalPages(res.data.totalPages);
       } catch (err) {
@@ -31,11 +33,11 @@ function Question() {
   }, [page]);
 
   const handleNext = () => {
-    if (page < totalPages) setPage((prev) => prev + 1);
+    if (page < totalPages) setPage(prev => prev + 1);
   };
 
   const handlePrev = () => {
-    if (page > 1) setPage((prev) => prev - 1);
+    if (page > 1) setPage(prev => prev - 1);
   };
 
   const filteredQuestions = questions.filter((question) => {
@@ -99,14 +101,17 @@ function Question() {
           </div>
 
           <div className={styles.paginationControls}>
-            <button onClick={handlePrev} disabled={page === 1}>
+            <button
+              onClick={handlePrev}
+              disabled={page === 1}
+            >
               Previous
             </button>
-            <span>
-              {" "}
-              Page {page} of {totalPages}{" "}
-            </span>
-            <button onClick={handleNext} disabled={page === totalPages}>
+            <span> Page {page} of {totalPages} </span>
+            <button
+              onClick={handleNext}
+              disabled={page === totalPages}
+            >
               Next
             </button>
           </div>
