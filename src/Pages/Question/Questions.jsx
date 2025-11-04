@@ -9,36 +9,16 @@ function Question() {
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
 
   const { user } = useContext(UserState);
 
   useEffect(() => {
-    const fetchQuestions = async () => {
-      setLoading(true);
-      try {
-        const res = await axiosInstance.get(
-          `/questions?page=${page}&limit=6`
-        );
-        setQuestions(res.data.data);
-        setTotalPages(res.data.totalPages);
-      } catch (err) {
-        console.error("Error fetching questions:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchQuestions();
-  }, [page]);
-
-  const handleNext = () => {
-    if (page < totalPages) setPage(prev => prev + 1);
-  };
-
-  const handlePrev = () => {
-    if (page > 1) setPage(prev => prev - 1);
-  };
+    setLoading(true);
+    axiosInstance.get("/questions").then((res) => {
+      setQuestions(res.data.message);
+      setLoading(false);
+    });
+  }, []);
 
   const filteredQuestions = questions.filter((question) => {
     const titleMatches = question.title
@@ -50,6 +30,7 @@ function Question() {
     return titleMatches || descriptionMatches;
   });
 
+  // Divide questions into groups of 2 (for 2x2 rows)
   const groupedQuestions = [];
   for (let i = 0; i < filteredQuestions.length; i += 2) {
     groupedQuestions.push(filteredQuestions.slice(i, i + 2));
@@ -75,47 +56,29 @@ function Question() {
           <p>No Questions Found</p>
         </div>
       ) : (
-        <>
-          <div className={styles.questions_wrapper}>
-            {groupedQuestions.map((group, index) => (
-              <div
-                key={index}
-                className={
-                  group.length === 2
-                    ? styles.questions_grid
-                    : styles.single_question_wrapper
-                }
-              >
-                {group.map((question) => (
-                  <QuestionCard
-                    key={question.questionid}
-                    id={question.questionid}
-                    userName={question.username}
-                    questionTitle={question.title}
-                    description={question.description}
-                    question_date={question.createdAt}
-                  />
-                ))}
-              </div>
-            ))}
-          </div>
-
-          <div className={styles.paginationControls}>
-            <button
-              onClick={handlePrev}
-              disabled={page === 1}
+        <div className={styles.questions_wrapper}>
+          {groupedQuestions.map((group, index) => (
+            <div
+              key={index}
+              className={
+                group.length === 2
+                  ? styles.questions_grid // even group: 2x2
+                  : styles.single_question_wrapper // single (odd leftover)
+              }
             >
-              Previous
-            </button>
-            <span> Page {page} of {totalPages} </span>
-            <button
-              onClick={handleNext}
-              disabled={page === totalPages}
-            >
-              Next
-            </button>
-          </div>
-        </>
+              {group.map((question) => (
+                <QuestionCard
+                  key={question.questionid}
+                  id={question.questionid}
+                  userName={question.username}
+                  questionTitle={question.title}
+                  description={question.description}
+                  question_date={question.createdAt}
+                />
+              ))}
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
