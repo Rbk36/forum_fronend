@@ -19,7 +19,6 @@ function AIAnswer() {
   useEffect(() => {
     const fetchAIAnswer = async () => {
       if (!user?.userid) {
-        // If user not logged in redirect or show warning
         await Swal.fire({
           title: "Unauthorized",
           text: "You must be logged in to use AI answer.",
@@ -34,14 +33,14 @@ function AIAnswer() {
         setLoading(true);
         const token = localStorage.getItem("Evangadi_Forum");
         const response = await axiosInstance.post(
-          "/suggest-ai-answer",
+          "/api/v1/suggest-ai-answer", // ensure full path if your axiosInstance baseUrl doesn’t include /api/v1
           {
             questionid: questionId,
-            prompt: "", // optionally if prompt required
+            prompt: "", // or user input if you move to prompt UI
           },
           {
             headers: { Authorization: `Bearer ${token}` },
-            timeout: 30000, // add timeout
+            timeout: 30000,
           }
         );
         setAiAnswer(response.data.answer);
