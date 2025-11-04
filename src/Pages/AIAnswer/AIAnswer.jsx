@@ -34,7 +34,7 @@ function AIAnswer() {
         setLoading(true);
         const token = localStorage.getItem("Evangadi_Forum");
         const response = await axiosInstance.post(
-          "/ai/answer",
+          "/suggest-ai-answer",
           {
             questionid: questionId,
             prompt: "", // optionally if prompt required

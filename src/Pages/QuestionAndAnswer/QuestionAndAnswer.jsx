@@ -141,7 +141,7 @@ function QuestionAndAnswer() {
     try {
       setAiLoading(true);
       const response = await axiosInstance.post(
-        "/ai/answer",
+        "/suggest-ai-answer",
         { questionid: questionId, prompt },
         {
           headers: { Authorization: `Bearer ${token}` },
