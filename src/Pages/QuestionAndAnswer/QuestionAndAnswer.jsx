@@ -1,5 +1,5 @@
 import { useContext, useEffect, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { axiosInstance } from "../../utility/axios.js";
 import Layout from "../../Layout/Layout.jsx";
 import styles from "./answer.module.css";
@@ -15,6 +15,7 @@ function QuestionAndAnswer() {
   const { user } = useContext(UserState);
   const userId = user?.userid;
   const { questionId } = useParams();
+  const navigate = useNavigate();
 
   const [questionDetails, setQuestionDetails] = useState({});
   const [loading, setLoading] = useState(true);
@@ -27,7 +28,7 @@ function QuestionAndAnswer() {
   const fetchQuestion = async () => {
     try {
       setLoading(true);
-      const res = await axiosInstance.get(`/api/v1/question/${questionId}`);
+      const res = await axiosInstance.get(`/question/${questionId}`);
       setQuestionDetails(res.data);
     } catch (err) {
       console.error("Error fetching question details:", err);
@@ -58,7 +59,6 @@ function QuestionAndAnswer() {
       });
       return;
     }
-
     const answerText = answerInput.current.value?.trim();
     if (!answerText) {
       await Swal.fire({
@@ -72,8 +72,12 @@ function QuestionAndAnswer() {
 
     try {
       const response = await axiosInstance.post(
-        "/api/v1/answer",
-        { userid: userId, answer: answerText, questionid: questionId },
+        "/answer",
+        {
+          userid: userId,
+          answer: answerText,
+          questionid: questionId,
+        },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (response.status === 201) {
@@ -86,6 +90,11 @@ function QuestionAndAnswer() {
         answerInput.current.value = "";
         await fetchQuestion();
       } else {
+        console.warn(
+          "Unexpected status in handlePostAnswer:",
+          response.status,
+          response.data
+        );
         await Swal.fire({
           title: "Error",
           text:
@@ -106,8 +115,7 @@ function QuestionAndAnswer() {
     }
   };
 
-  const handleGenerateAISuggestion = async (e) => {
-    // rename to reflect suggestion only
+  const handlePostAIAnswer = async (e) => {
     e.preventDefault();
     const token = localStorage.getItem("Evangadi_Forum");
     if (!token) {
@@ -119,7 +127,6 @@ function QuestionAndAnswer() {
       });
       return;
     }
-
     const prompt = aiPromptInput.current.value?.trim();
     if (!prompt) {
       await Swal.fire({
@@ -134,26 +141,28 @@ function QuestionAndAnswer() {
     try {
       setAiLoading(true);
       const response = await axiosInstance.post(
-        "/api/v1/suggest-ai-answer",
+        "/ai/answer",
         { questionid: questionId, prompt },
         {
           headers: { Authorization: `Bearer ${token}` },
-          timeout: 30000,
+          timeout: 30000, // increased timeout
         }
       );
-      if (response.status === 200) {
-        // based on earlier change we return 200 and show suggestion
+      if (response.status === 201) {
         await Swal.fire({
           title: "AI Answer Generated!",
-          text: "An AI-generated answer is ready for review. Please post manually if you accept it.",
+          text: "An AI-generated answer has been posted successfully!",
           icon: "success",
           confirmButtonText: "OK",
         });
-        const suggestion = response.data.answer;
-        // maybe show the suggestion somewhere and allow user to post manually
         aiPromptInput.current.value = "";
-        // e.g., set state to display suggestion and then reuse handlePostAnswer flow
+        await fetchQuestion();
       } else {
+        console.warn(
+          "Unexpected status in handlePostAIAnswer:",
+          response.status,
+          response.data
+        );
         await Swal.fire({
           title: "Error",
           text: response.data?.message || "Failed to generate AI answer.",
@@ -162,20 +171,18 @@ function QuestionAndAnswer() {
         });
       }
     } catch (error) {
-      console.error("Error generating AI suggestion:", error);
+      console.error("Error posting AI answer:", error);
+      const status = error.response?.status;
       let message = "Failed to generate AI answer. Please try again later.";
       if (error.code === "ECONNABORTED") {
         message = "Request timed out. Please try again.";
-      } else if (
-        error.response?.status === 401 ||
-        error.response?.status === 403
-      ) {
+      } else if (status === 401 || status === 403) {
         message = "Unauthorized. Please login again.";
-      } else if (error.response?.status === 429) {
+      } else if (status === 429) {
         message = "Rate limit exceeded. Please try again later.";
-      } else if (error.response?.status === 400) {
+      } else if (status === 400) {
         message =
-          error.response.data?.message || "Invalid request for AI answer.";
+          error.response?.data?.message || "Invalid request for AI answer.";
       }
       await Swal.fire({
         title: "Error",
@@ -185,6 +192,68 @@ function QuestionAndAnswer() {
       });
     } finally {
       setAiLoading(false);
+    }
+  };
+
+  const handleDeleteAnswer = async (answerid) => {
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "This will permanently delete your answer.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel",
+    });
+    console.log(answerid);
+    if (!result.isConfirmed) return;
+
+    const token = localStorage.getItem("Evangadi_Forum");
+    try {
+      const response = await axiosInstance.delete(`/answer/${answerid}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.status === 200) {
+        await Swal.fire({
+          title: "Deleted!",
+          text: "Your answer has been deleted.",
+          icon: "success",
+          confirmButtonText: "OK",
+        });
+        await fetchQuestion();
+      } else {
+        await Swal.fire({
+          title: "Error",
+          text: "Could not delete answer.",
+          icon: "error",
+          confirmButtonText: "OK",
+        });
+      }
+    } catch (error) {
+      console.error("Error deleting answer:", error);
+      const status = error.response?.status;
+      if (status === 404) {
+        await Swal.fire({
+          title: "Error",
+          text: "Answer not found or already deleted.",
+          icon: "error",
+          confirmButtonText: "OK",
+        });
+        await fetchQuestion();
+      } else if (status === 403) {
+        await Swal.fire({
+          title: "Error",
+          text: "Not authorized to delete this answer.",
+          icon: "error",
+          confirmButtonText: "OK",
+        });
+      } else {
+        await Swal.fire({
+          title: "Error",
+          text: "Could not delete answer. Please try again.",
+          icon: "error",
+          confirmButtonText: "OK",
+        });
+      }
     }
   };
 
@@ -264,6 +333,7 @@ function QuestionAndAnswer() {
                       .toUpperCase()}
                   </p>
                 </div>
+                {/* Delete for answer owner */}
                 {userId === answer.userid && (
                   <div className={styles.answerActions}>
                     <button
@@ -305,7 +375,7 @@ function QuestionAndAnswer() {
             </form>
           </section>
 
-          {/* AI Suggestion Form */}
+          {/* AI Answer Form */}
           <section
             className={styles.aiAnswerFormSection}
             style={{ marginTop: "2rem" }}
@@ -313,7 +383,7 @@ function QuestionAndAnswer() {
             <h3 className={styles.answerFormTitle}>
               Let AI Help Answer This Question
             </h3>
-            <form onSubmit={handleGenerateAISuggestion}>
+            <form onSubmit={handlePostAIAnswer}>
               <textarea
                 placeholder="Ask the AI for help..."
                 className={styles.answerInput}
